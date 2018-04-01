@@ -66,3 +66,10 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+.idea/
+build.sbt
+project/build.properties
+input/*
+ouput/*
+/run.txt
+/src/main/scala/edgar/MainSpark.scala
