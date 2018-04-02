@@ -24,7 +24,7 @@ object Main extends IOSetup {
       match {
         // If a timeout value can't be read, print a message, then exit
         case Failure(_) =>
-          println(s"Couldn't read a timeout value from '$inactivityArg'")
+          println(s"Couldn't read a timeout value from\t\n$inactivityArg")
         
         // If a timeout value has benn successfully read, continue
         case Success(timeout) =>
@@ -34,7 +34,7 @@ object Main extends IOSetup {
           match {
             // If data can't be read for some reason, print a message, and exit
             case Failure(_) =>
-              println(s"Couldn't read data from '$logArg'")
+              println(s"Couldn't read data from\n\t$logArg")
             
             // If the data can be read, continue
             // also saving the file handle so it can be closed after all else is done
@@ -46,7 +46,7 @@ object Main extends IOSetup {
               match {
                 // If failed to open the output file, print a message, and exit
                 case Failure(_) =>
-                  println(s"Error: Unable to output the results to '$outputArg")
+                  println(s"Error: Unable to output the results to\n\t$outputArg")
                 
                 // If succeeded, continue using the file handle
                 case Success(bw) =>

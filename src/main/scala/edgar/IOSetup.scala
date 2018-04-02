@@ -20,12 +20,12 @@ trait IOSetup {
     Try(Source.fromFile(file)) match {
       // If the file isn't there, print a message, and exit
       case Failure(e: FileNotFoundException) =>
-        println(s"Error: Can't find the file '$file'")
+        println(s"Error: Can't find the file\n\t$file")
         Failure(e)
 
       // If an unforeseen exception occurs, print its message, and exit
       case Failure(e) =>
-        println(s"Error: {$e.getMessage}")
+        println(s"Error: ${e.getMessage}")
         Failure(e)
 
       // If the file opens successfully
@@ -49,7 +49,7 @@ trait IOSetup {
           // If an unforeseen exception occurs, print its message, close the file, and exit
           case Failure(e) =>
             s.close
-            println(s"Error: {$e.getMessage}")
+            println(s"Error: ${e.getMessage}")
             Failure(e)
 
           // If the number was successfully parsed, close the file, and return its Success wrapper
@@ -72,12 +72,12 @@ trait IOSetup {
     Try(Source.fromFile(file)) match {
       // If the file isn't there, print a message, and exit
       case Failure(e: FileNotFoundException) =>
-        println(s"Error: Can't find the file '$file'")
+        println(s"Error: Can't find the file\n\t$file")
         Failure(e)
 
       // If an unforeseen exception occurs, print its message, and exit
       case Failure(e) =>
-        println(s"Error: {$e.getMessage}")
+        println(s"Error: ${e.getMessage}")
         Failure(e)
 
       // If the file opens successfully
@@ -93,7 +93,7 @@ trait IOSetup {
           // If an unforeseen exception occurs, print its message, and exit
           case Failure(e) =>
             s.close
-            println(s"Error: {$e.getMessage}")
+            println(s"Error: ${e.getMessage}")
             Failure(e)
 
           // If successfully skipped the headers, return the iterator over the remaining lines,
@@ -113,24 +113,26 @@ trait IOSetup {
     */
   def setupOutput(out: File): Try[BufferedWriter] = {
     // Checking if the file already exists, and trying to create one if not
-    if (!out.exists) Try(out.createNewFile) match {
-      case Failure(e) =>
-        // If can't create the file, print a message, and exit
-        println(s"Error: Cannot create the output file '${out.getPath}'")
-        return Failure(e)
+    if (!out.exists) {
+      Try(out.createNewFile) match {
+        case Failure(e) =>
+          // If can't create the file, print a message, and exit
+          println(s"Error: Cannot create the output file\n\t${out.getPath}")
+          return Failure(e)
 
-      // If successfully created the file, set its write permissions on.
-      // This could also raise an exception, but if it does, creating the writer below will too,
-      // and we'll just catch that one
-      case Success(_) =>
-        out.setWritable(true)
+        // If successfully created the file, set its write permissions on.
+        // This could also raise an exception, but if it does, creating the writer below will too,
+        // and we'll just catch that one
+        case Success(_) =>
+          out.setWritable(true)
+      }
     }
   
     // Trying to open the file for writing and to create the writer
     Try(new BufferedWriter(new FileWriter(out))) match {
       // If failed, print a message, and exit
       case Failure(e) =>
-        println(s"Error: Cannot write to '${out.getPath}'")
+        println(s"Error: Cannot write to\n\t${out.getPath}")
         Failure(e)
 
       // If succeeded, return the writer
