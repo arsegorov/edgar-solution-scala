@@ -69,7 +69,7 @@ $RECYCLE.BIN/
 .idea/
 project/build.properties
 input/*
-ouput/*
-/run.txt
-/src/main/scala/edgar/MainSpark.scala
-/output/sessionization.txt
+output/*
+/lib/*.jar
+/images/
+/*.jar

@@ -17,7 +17,7 @@ trait RequestParser {
     *       it's fine, but if we were to count ''unique'' requests,
     *       we'd need to introduce another parameter.
     */
-  final case class Request(ip: String, timestamp: Long)
+  case class Request(ip: String, timestamp: Long)
   
   /**
     * Converts a line from the log file to a [[edgar.RequestParser#Request Request]] instance.

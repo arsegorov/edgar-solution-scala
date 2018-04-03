@@ -1,0 +1,4 @@
+Manifest-Version: 1.0
+Main-Class: edgar.Main
+Class-Path: lib/scala-library-2.11.6.jar
+
