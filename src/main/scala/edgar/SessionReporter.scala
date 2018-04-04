@@ -20,7 +20,7 @@ object SessionReporter extends RequestParser {
     * If the sessions started at the same time, then we use the order in which they appear in the log,
     * given by '''`idx`'''.
     */
-  private final object ReportingOrder extends Ordering[(String, Int, Long, Long, Int)] {
+  private final object AppearanceOrder extends Ordering[(String, Int, Long, Long, Int)] {
     /**
       * Compares two tuples first on their 3rd component, then on their 2nd component.
       *
@@ -47,16 +47,20 @@ object SessionReporter extends RequestParser {
     */
   def processData(lines: Iterator[String], tOutMil: Int, bw: BufferedWriter): Unit =
   {
-    // A helper map
-    // time -> Set(of IPs with the last request at that time)
-    val timeMap: mutable.HashMap[Long, mutable.Set[String]] = mutable.HashMap()
+    // Session data
     // IP -> line index, first request time, last request time, request count
     val ipMap: mutable.HashMap[String, (Int, Long, Long, Int)] = mutable.HashMap()
-    // An ordered set, for queueing expired sessions according to appearance order before output
-    val outputBatch: mutable.SortedSet[(String, Int, Long, Long, Int)] = mutable.SortedSet()(ReportingOrder)
-  
-    var idx = 2                  // tracking the log line's number
-    var earliestSavedTime = -1L  // tracking the time of the earliest saved session
+    // A helper map
+    // time -> the set of the IPs with the last request recorded at that time
+    val timeMap: mutable.HashMap[Long, mutable.Set[String]] = mutable.HashMap()
+    // the oldest last request time of a saved session
+    var oldestTLast: Long = -1L
+    
+    // The output queue for expired sessions, sorting the sessions according to the first appearance
+    val outputBatch: mutable.SortedSet[(String, Int, Long, Long, Int)] = mutable.SortedSet()(AppearanceOrder)
+    
+    // tracking the log line's number
+    var idx = 2
     
     // The requests iterator
     // (the lines are read from the file one at a time, only when we're asking for the next request)
@@ -93,12 +97,12 @@ object SessionReporter extends RequestParser {
           
           // Now, see if any sessions have expired
           
-          if (earliestSavedTime < cutoffTime) {                    // Only detect expired sessions when there are some
+          if (oldestTLast < cutoffTime) {                          // Only detect expired sessions when there are some
             val expiredTimes = timeMap.keys.filter(_ < cutoffTime) // All the expired times
   
             expiredTimes.foreach {
               expiredTime =>
-                val Some(expiredIPs) = timeMap.remove(expiredTime) // Remove the expired times one at a time
+                val Some(expiredIPs) = timeMap.remove(expiredTime) // Remove the expired times, one at a time
                 expiredIPs.foreach {
                   expiredIP =>                                     // For each expired time,
                                                                    // queue the corresponding sessions for output
@@ -107,7 +111,7 @@ object SessionReporter extends RequestParser {
                 }
             }
             
-            earliestSavedTime =                                    // Update the time of the earliest saved session
+            oldestTLast =                                          // Update the time of the earliest saved session
               if (timeMap.nonEmpty) timeMap.keys.min
               else -1L
   
@@ -121,7 +125,7 @@ object SessionReporter extends RequestParser {
           // there's no record of this IP at this point, so we add a new record
           if (!renewed) ipMap.put(ip, (idx, timestamp, timestamp, 1))
   
-          // See if any other IPs have already made a request at this time
+          // Save this request's IP to the set of requests for the current timestamp
           if(timeMap.contains(timestamp)) timeMap(timestamp).add(ip) else timeMap.put(timestamp, mutable.Set(ip))
       }
       
