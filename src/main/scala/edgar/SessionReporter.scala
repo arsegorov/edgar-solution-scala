@@ -47,80 +47,89 @@ object SessionReporter extends RequestParser {
     */
   def processData(lines: Iterator[String], tOutMil: Int, bw: BufferedWriter): Unit =
   {
-    // This map will contain the unexpired sessions' information, in the format:
-    // ip -> (line index, first request time, last request time, requests count)
+    // A helper map
+    // time -> Set(of IPs with the last request at that time)
+    val timeMap: mutable.HashMap[Long, mutable.Set[String]] = mutable.HashMap()
+    // IP -> line index, first request time, last request time, request count
     val ipMap: mutable.HashMap[String, (Int, Long, Long, Int)] = mutable.HashMap()
-    
-    // An ordered set, for collecting and sorting the expired sessions before sending them to output
+    // An ordered set, for queueing expired sessions according to appearance order before output
     val outputBatch: mutable.SortedSet[(String, Int, Long, Long, Int)] = mutable.SortedSet()(ReportingOrder)
-    
-    // The time of the latest of the seen requests
-    var endingTime: Long = 0
   
-    // Replacing the line iterator with a request iterator
-    val requests = lines.map(toRequest)
-    // The current line's index, for ordering the output
-    // Setting to 2 as we skipped the first line already
-    // Ideally, would be passed as a parameter to the function
-    var idx = 2
+    var idx = 2                  // tracking the log line's number
+    var earliestSavedTime = -1L  // tracking the time of the earliest saved session
     
-    // Read the requests from the log one at a time
-    while (requests.hasNext) {
-      requests.next match {
-        // If converting the current log line to a request fails,
+    // The requests iterator
+    // (the lines are read from the file one at a time, only when we're asking for the next request)
+    val requests = lines.map(toRequest)
+    
+    while (requests.hasNext)
+    {
+      // Trying to read the next log line to get the request information
+      requests.next match
+      {
+        // If the current log line is malformed,
         // print a message, and continue to the next log line
         case Failure(e) =>
           println(s"Unexpected format in line $idx\n" + e.getMessage + "\n")
-        
-        // If the line is well-formed, continue with the request data
-        case Success(Request(ip, timestamp)) =>
-          // Updating the time of the last request
-          endingTime = timestamp
-          
-          val cutoffTime = timestamp - tOutMil               // The cutoff time for determining expired sessions
-          
-          ipMap.get(ip) match {                              // First, check, if the IP already has a session
-            case None =>                                     // If no,
-              ipMap.put(ip, (idx, timestamp, timestamp, 1))  // store a new session
-            
-            case Some((oldIdx, tFirst, tLast, count)) =>     // If yes, check if that session got extended
-              
-              if (tLast >= cutoffTime)                                    // If the last access time is past the cutoff
-                ipMap.update(ip, (oldIdx, tFirst, timestamp, count + 1))  // extend the session to the current time.
-                
-              else {                                                      // Otherwise,
-                outputBatch.add((ip, oldIdx, tFirst, tLast, count))       // report that session as expired,
-                ipMap.update(ip, (idx, timestamp, timestamp, 1))          // and start a new one.
-              }
-          }
-          
-          // Collect the expired sessions' IPs
-          val expiredIPs =
-            ipMap
-              .filter {  // picking the sessions whose last request was before the cutoff time
-                case (_, (_, _, tLast, _)) => tLast < cutoffTime
-              }
-              .keys
-          
-          // Removing the expires sessions and queueing them for output
-          expiredIPs.foreach {
-            ip1 =>
-              val Some((oldIdx, tFirst, tLast, count)) = ipMap.remove(ip1)
-              outputBatch.add((ip1, oldIdx, tFirst, tLast, count))
-          }
   
-          // Outputting each expired session, and clearing the queue
-          outputBatch.foreach {
-            case (ip1, _, tFirst, tLast, count) => outputSession(ip1, tFirst, tLast, count, bw)
-          }
-          outputBatch.clear
+        // If the current line is well-formed, continue
+        case Success(Request(ip, timestamp)) =>
           
-          idx += 1
+          // The cutoff time for determining expired sessions
+          val cutoffTime = timestamp - tOutMil
+          // See if this one is a renewed session
+          val renewed = ipMap.contains(ip) && ipMap(ip)._3 >= cutoffTime
+          
+          // If the session is renewed, update the last request time and the request count
+          if (renewed) {
+            val (firstIdx, tFirst, tLast, count) = ipMap(ip)
+            ipMap.update(ip, (firstIdx, tFirst, timestamp, count + 1))
+            
+            // If the previous request was at a strictly earlier time,
+            // remove the IP from the list for that time
+            if (tLast < timestamp)
+              timeMap(tLast).remove(ip)
+          }
+          
+          // Now, see if any sessions have expired
+          
+          if (earliestSavedTime < cutoffTime) {                    // Only detect expired sessions when there are some
+            val expiredTimes = timeMap.keys.filter(_ < cutoffTime) // All the expired times
+  
+            expiredTimes.foreach {
+              expiredTime =>
+                val Some(expiredIPs) = timeMap.remove(expiredTime) // Remove the expired times one at a time
+                expiredIPs.foreach {
+                  expiredIP =>                                     // For each expired time,
+                                                                   // queue the corresponding sessions for output
+                    val Some((firstIdx, tFirst, tLast, count)) = ipMap.remove(expiredIP)
+                    outputBatch.add((expiredIP, firstIdx, tFirst, tLast, count))
+                }
+            }
+            
+            earliestSavedTime =                                    // Update the time of the earliest saved session
+              if (timeMap.nonEmpty) timeMap.keys.min
+              else -1L
+  
+            outputBatch.foreach {                                  // Output the queued sessions
+              case (ip1, _, tFirst, tLast, count) => outputSession(ip1, tFirst, tLast, count, bw)
+            }
+            outputBatch.clear                                      // Then clear the queue
+          }
+          
+          // If a session for this IP hasn't been renewed
+          // there's no record of this IP at this point, so we add a new record
+          if (!renewed) ipMap.put(ip, (idx, timestamp, timestamp, 1))
+  
+          // See if any other IPs have already made a request at this time
+          if(timeMap.contains(timestamp)) timeMap(timestamp).add(ip) else timeMap.put(timestamp, mutable.Set(ip))
       }
+      
+      idx += 1
     }
-    
-    // Reached the end og the log
-    
+  
+    // Reached the end of the log
+  
     // Queueing any remaining sessions for output
     ipMap.foreach {
       case (ip, (oldIdx, tFirst, tLast, count)) =>

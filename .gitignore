@@ -73,3 +73,4 @@ output/*
 /lib/*.jar
 /images/
 /*.jar
+/edgar-log.txt
