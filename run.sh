@@ -1,17 +1,21 @@
 #!/bin/bash
 
-declare cyan="\e[1;49;36m"
-declare grn="\e[1;49;32m"
-declare nrm="\e[0;39;49m"
-declare info="[${grn}info${nrm}]\t"
-declare done="Done"
+# Output decorations
+declare -r cyan="\e[1;49;36m"
+declare -r grn="\e[1;49;32m"
+declare -r nrm="\e[0;39;49m"
+declare -r info="[${grn}info${nrm}]\t"
 
-dest=out
+# Paths
+declare -r scala_in=src/main/scala
+declare -r scala_src=${scala_in}/edgar
+declare -r scala_out=out
+declare -r jar=edgar.jar
 
 # Building
 if [ ! -f edgar.jar ]; then
-    # Cleaning ./bin, ./output
-    for d in ${dest}; do
+    # Preparing directories
+    for d in ${scala_out}; do
         if [ -e ${d} ]; then
             echo -e "${info}Cleaning out ${cyan}$d/${nrm}"
             cd ${d}
@@ -26,16 +30,20 @@ if [ ! -f edgar.jar ]; then
     done
 
     # Compiling
-    echo -en "${info}Compiling sources ... "
-    scalac -sourcepath src/main/scala/edgar/ -d ./${dest}/ src/main/scala/edgar/*
+    echo -en "${info}Compiling sources to ${cyan}${scala_out}/${nrm} ... "
+    scalac -sourcepath ${scala_src}/ -d ./${scala_out}/ ${scala_src}/*
     echo "Done"
 
     # Packaging
-    echo -en "${info}Packaging ${cyan}edgar.jar${nrm} ... "
-    cd ${dest}
-    jar -cfm ../edgar.jar ../src/main/scala/META-INF/MANIFEST.MF *
+    echo -en "${info}Packaging ${cyan}${jar}${nrm} ... "
+    cd ${scala_out}
+    jar -cfm ../${jar} ../${scala_in}/META-INF/MANIFEST.MF *
     cd ..
     echo "Done"
+
+    # Cleaning out compiler output
+    echo -e "${info}Removing ${cyan}${scala_out}/${nrm}"
+    rm -r ${scala_out}
 fi
 
 # Running
@@ -52,5 +60,5 @@ for i in 1..3; do
     fi
 done
 
-echo -e "${info}Running the program ... "
-scala edgar.jar ${args[1]} ${args[2]} ${args[3]}
+echo -e "${info}Running the program, ${cyan}${jar}${nrm}"
+scala ${jar} ${args[1]} ${args[2]} ${args[3]}
