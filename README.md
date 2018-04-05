@@ -2,7 +2,7 @@
 
 1. [About](README.md#About)
 2. [Requirements](README.md#Requirements)
-3. [Running and Running](README.md#Building-and-Running)
+3. [Building and Running](README.md#Building-and-Running)
 
 
 
