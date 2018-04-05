@@ -1,5 +1,6 @@
 package edgar
 import java.io.{BufferedWriter, File, FileNotFoundException, FileWriter}
+import java.nio.file.Files
 
 import edgar.Main.err
 
@@ -126,7 +127,14 @@ trait IOSetup {
   def setupOutput(out: File): Try[BufferedWriter] = {
     // Checking if the file already exists, and trying to create one if not
     if (!out.exists) {
-      Try(out.createNewFile) match {
+      Try {
+        val dir = out.getParentFile
+        if (dir != null && !dir.exists) {
+          Files.createDirectories(dir.toPath)
+        }
+        
+        out.createNewFile
+      } match {
         case Failure(e) =>
           // If can't create the file, print a message, and exit
           println(s"$err Cannot create\n" +

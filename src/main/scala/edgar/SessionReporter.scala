@@ -77,8 +77,7 @@ object SessionReporter extends RequestParser {
         // print a message, and continue to the next log line
         case Failure(e) =>
           println(
-            s"$warn " +
-            s"Unexpected format on line $idx\n" +
+            s"$warn Unexpected format on line $idx\n" +
             s"${e.getMessage}\n" +
             s"Skipping line $idx\n")
   

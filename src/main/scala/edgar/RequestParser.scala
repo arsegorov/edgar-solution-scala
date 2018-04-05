@@ -35,8 +35,11 @@ trait RequestParser {
     // print a detailed message, and exit
     if (len < 3)
       Failure(
-        new Exception(s"\tThe line is incomplete. Found $len field${if (len > 1) "s" else ""}:\n" +
-          fields.map(str => if (str.trim == "") "<empty>" else str).mkString("\t\t", "\n\t\t", "\n") +
+        new Exception(
+          s"\tThe line is incomplete. Found $len field${if (len > 1) "s" else ""}:\n" +
+            fields.zip(1 to len).map {
+              case (str, i) => s"$i. ${fieldValue(str)}"
+            }.mkString("\t\t", "\n\t\t", "\n") +
           "\tExpecting at least 3 fields: IP, Date, Time")
       )
     else {
@@ -44,8 +47,8 @@ trait RequestParser {
       Try {
         val ip = fields(0).split("\\.")
         val ipFormatException =
-          "\tAn improper format in\n" +
-            s"\t\tIP: '${fields(0)}'\n" +
+          "\tAn improper IP format:\n" +
+            s"\t\tIP: ${fieldValue(fields(0))}\n" +
           "\tExpecting 000.000.000.xxx, where 000 is in 0..255, xxx is a 3-character string"
         
         
@@ -86,8 +89,8 @@ trait RequestParser {
           Failure(
             new Exception(
               "\tAn improper Date/Time format in\n" +
-                s"\t\tDate: '${fields(1)}'\n" +
-                s"\t\tTime: '${fields(2)}'\n" +
+                s"\t\tDate: ${fieldValue(fields(1))}\n" +
+                s"\t\tTime: ${fieldValue(fields(2))}\n" +
               "\tExpecting `YYYY-MM-DD` for Date and `hh-mm-ss` for Time"))
 
         // If the Request cannot be created for another, unforeseen reason,
@@ -101,4 +104,6 @@ trait RequestParser {
       }
     }
   }
+  
+  private def fieldValue(s: String): String = if (s.trim == "") "<empty>" else s
 }
