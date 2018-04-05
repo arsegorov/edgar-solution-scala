@@ -29,40 +29,76 @@ trait RequestParser {
     // If we need the first `n` columns, set the split limit to `n + 1`,
     // since there might be some trailing fields
     val fields = line.split(",", 4)
+    val len = fields.length
     
     // If a line doesn't have enough fields, print a message,
     // print a detailed message, and exit
-    if (fields.length < 3)
+    if (len < 3)
       Failure(
-        new Exception("The line is incomplete. Found fields:\n\t" +
-          fields.mkString("\n\t") +
-          "\nExpecting at least 3 fields: IP, Date, Time")
+        new Exception(s"\tThe line is incomplete. Found $len field${if (len > 1) "s" else ""}:\n" +
+          fields.map(str => if (str.trim == "") "<empty>" else str).mkString("\t\t", "\n\t\t", "\n") +
+          "\tExpecting at least 3 fields: IP, Date, Time")
       )
-    else
-    // Trying to create a Request from the fields
-      Try(
-        Request(fields(0), Timestamp.valueOf(fields(1) + " " + fields(2)).getTime
+    else {
+      // Trying to create a Request from the fields
+      Try {
+        val ip = fields(0).split("\\.")
+        val ipFormatException =
+          "\tAn improper format in\n" +
+            s"\t\tIP: '${fields(0)}'\n" +
+          "\tExpecting 000.000.000.xxx, where 000 is in 0..255, xxx is a 3-character string"
+        
+        
+        // Checking the IP format
+        // The IP should have 4 octets
+        if (ip.length != 4)
+          return Failure(new Exception(ipFormatException))
+        
+        // The first 3 octets should be numbers, in the 0..255 range
+        ip.take(3).foreach {
+          str =>
+            Try (str.toInt) match {
+              case Failure(_: NumberFormatException) =>
+                return Failure(new Exception(ipFormatException))
+                
+              case Failure(e) =>
+                return Failure(e)
+
+              case Success(n) =>
+                if (n < 0 || n > 255)
+                  return Failure(new Exception(ipFormatException))
+            }
+        }
+        
+        // The last octet should be a 3-character string
+        if (ip(3).length != 3)
+          return Failure(new Exception(ipFormatException))
+        
+        
+        // If the IP format is valid, try forming the Timestamp, and the request
+        Request(fields(0), Timestamp.valueOf(fields(1) + " " + fields(2)).getTime)
           // Add the 3 fields below if we'll need to be able to distinguish b/w different documents
           // , (fields(4), fields(5), fields(6))
-        )
-      ) match {
+      } match {
         // If the Date and Time fields don't comply with the specified format,
         // print a detailed message, and exit
         case Failure(_: IllegalArgumentException) =>
           Failure(
-            new Exception("An improper Date/Time format in:\n\tDate: " +
-              fields(1) + "\n\tTime: " + fields(2) +
-              "\nExpecting `YYYY-MM-DD` for Date and `hh-mm-ss` for Time")
-          )
-        
+            new Exception(
+              "\tAn improper Date/Time format in\n" +
+                s"\t\tDate: '${fields(1)}'\n" +
+                s"\t\tTime: '${fields(2)}'\n" +
+              "\tExpecting `YYYY-MM-DD` for Date and `hh-mm-ss` for Time"))
+
         // If the Request cannot be created for another, unforeseen reason,
         // exit, passing the Exception upstream
         case Failure(e) =>
           Failure(e)
-        
+
         // If succeeded, return the Success wrapper of the created Request
         case Success(r) =>
           Success(r)
       }
+    }
   }
 }

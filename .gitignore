@@ -68,9 +68,7 @@ $RECYCLE.BIN/
 *.lnk
 .idea/
 project/build.properties
-input/*
-output/*
-/lib/*.jar
-/images/
+/input/*
+/output/*
 /*.jar
 /edgar-log.txt

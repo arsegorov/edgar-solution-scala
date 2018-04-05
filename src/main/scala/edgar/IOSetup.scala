@@ -1,6 +1,8 @@
 package edgar
 import java.io.{BufferedWriter, File, FileNotFoundException, FileWriter}
 
+import edgar.Main.err
+
 import scala.io.{BufferedSource, Source}
 import scala.util.{Failure, Success, Try}
 
@@ -20,12 +22,14 @@ trait IOSetup {
     Try(Source.fromFile(file)) match {
       // If the file isn't there, print a message, and exit
       case Failure(e: FileNotFoundException) =>
-        println(s"Error: Can't find the file\n\t$file")
+        println(
+          s"$err Can't find the file\n" +
+            s"\t\t$file\n")
         Failure(e)
 
       // If an unforeseen exception occurs, print its message, and exit
       case Failure(e) =>
-        println(s"Error: ${e.getMessage}")
+        println(s"$err ${e.getMessage}")
         Failure(e)
 
       // If the file opens successfully
@@ -37,19 +41,23 @@ trait IOSetup {
           // If the first line isn't a properly formatted integer, print a message, close the file, and exit
           case Failure(e: NumberFormatException) =>
             s.close
-            println(s"Error: An unexpected number format. A single integer on line 1 is expected")
+            println(s"$err An unexpected number format in\n" +
+              s"\t\t$file\n" +
+              "\tA single integer on line 1 is expected\n")
             Failure(e)
 
           // If the file doesn't have the first line (is empty), print a message, close the file, and exit
           case Failure(e: NoSuchElementException) =>
             s.close
-            println(s"Error: The input file is empty. A single integer on line 1 is expected")
+            println(s"$err The file\n" +
+              s"\t\t$file\n" +
+              "is empty. A single integer on line 1 is expected\n")
             Failure(e)
 
           // If an unforeseen exception occurs, print its message, close the file, and exit
           case Failure(e) =>
             s.close
-            println(s"Error: ${e.getMessage}")
+            println(s"$err ${e.getMessage}")
             Failure(e)
 
           // If the number was successfully parsed, close the file, and return its Success wrapper
@@ -72,12 +80,14 @@ trait IOSetup {
     Try(Source.fromFile(file)) match {
       // If the file isn't there, print a message, and exit
       case Failure(e: FileNotFoundException) =>
-        println(s"Error: Can't find the file\n\t$file")
+        println(
+          s"$err Can't find the file\n" +
+            s"\t\t$file\n")
         Failure(e)
 
       // If an unforeseen exception occurs, print its message, and exit
       case Failure(e) =>
-        println(s"Error: ${e.getMessage}")
+        println(s"$err \t${e.getMessage}\n")
         Failure(e)
 
       // If the file opens successfully
@@ -87,13 +97,15 @@ trait IOSetup {
           // If the file doesn't have the first line (is empty), print a message, close the file, and exit
           case Failure(e: NoSuchElementException) =>
             s.close
-            println(s"Error: The input file is empty. The first line should contain the columns' headers")
+            println(s"$err The file\n" +
+              s"\t\t$file\n" +
+              "\tis empty. Expecting column headers on line 1\n")
             Failure(e)
 
           // If an unforeseen exception occurs, print its message, and exit
           case Failure(e) =>
             s.close
-            println(s"Error: ${e.getMessage}")
+            println(s"$err ${e.getMessage}")
             Failure(e)
 
           // If successfully skipped the headers, return the iterator over the remaining lines,
@@ -117,7 +129,8 @@ trait IOSetup {
       Try(out.createNewFile) match {
         case Failure(e) =>
           // If can't create the file, print a message, and exit
-          println(s"Error: Cannot create the output file\n\t${out.getPath}")
+          println(s"$err Cannot create\n" +
+            s"\t\t${out.getPath}\n")
           return Failure(e)
 
         // If successfully created the file, set its write permissions on.
@@ -132,7 +145,8 @@ trait IOSetup {
     Try(new BufferedWriter(new FileWriter(out))) match {
       // If failed, print a message, and exit
       case Failure(e) =>
-        println(s"Error: Cannot write to\n\t${out.getPath}")
+        println(s"$err Cannot write to\n" +
+          s"\t\t${out.getPath}\n")
         Failure(e)
 
       // If succeeded, return the writer

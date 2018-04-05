@@ -7,6 +7,9 @@ import scala.util.{Failure, Success}
 
 object Main extends IOSetup {
   
+  val warn: String = "[" + Console.YELLOW + "warn" + Console.RESET + "]"
+  val err: String = "[" + Console.RED + "error" + Console.RESET + "]"
+  
   /**
     * The app's entry point
     *
@@ -24,7 +27,9 @@ object Main extends IOSetup {
       match {
         // If a timeout value can't be read, print a message, then exit
         case Failure(_) =>
-          println(s"Couldn't read a timeout value from\t\n$inactivityArg")
+          println("Couldn't read a timeout value from\n" +
+            s"\t$inactivityArg\n" +
+            "Exiting\n")
         
         // If a timeout value has benn successfully read, continue
         case Success(timeout) =>
@@ -34,7 +39,9 @@ object Main extends IOSetup {
           match {
             // If data can't be read for some reason, print a message, and exit
             case Failure(_) =>
-              println(s"Couldn't read data from\n\t$logArg")
+              println("Couldn't read data from\n" +
+                s"\t$logArg\n" +
+                "Exiting\n")
             
             // If the data can be read, continue
             // also saving the file handle so it can be closed after all else is done
@@ -46,7 +53,9 @@ object Main extends IOSetup {
               match {
                 // If failed to open the output file, print a message, and exit
                 case Failure(_) =>
-                  println(s"Error: Unable to output the results to\n\t$outputArg")
+                  println("Error: Unable to output the results to\n" +
+                    s"\t$outputArg\n" +
+                    "Exiting\n")
                 
                 // If succeeded, continue using the file handle
                 case Success(bw) =>

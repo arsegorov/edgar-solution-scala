@@ -3,6 +3,8 @@ package edgar
 import java.io.BufferedWriter
 import java.sql.Timestamp
 
+import edgar.Main.warn
+
 import scala.collection.mutable
 import scala.util.{Failure, Success}
 
@@ -74,7 +76,11 @@ object SessionReporter extends RequestParser {
         // If the current log line is malformed,
         // print a message, and continue to the next log line
         case Failure(e) =>
-          println(s"Unexpected format in line $idx\n" + e.getMessage + "\n")
+          println(
+            s"$warn " +
+            s"Unexpected format on line $idx\n" +
+            s"${e.getMessage}\n" +
+            s"Skipping line $idx\n")
   
         // If the current line is well-formed, continue
         case Success(Request(ip, timestamp)) =>
