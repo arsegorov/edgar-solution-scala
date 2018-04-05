@@ -70,3 +70,4 @@ $RECYCLE.BIN/
 project/build.properties
 /*.jar
 /insight_testsuite/
+/build.sbt
