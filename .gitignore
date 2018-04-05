@@ -68,13 +68,5 @@ $RECYCLE.BIN/
 *.lnk
 .idea/
 project/build.properties
-/input/*
-/output/*
 /*.jar
-/edgar-log.txt
-/build.sbt
 /insight_testsuite/
-/log-20170630.csv
-/log-20170629.csv
-/log-20170628.csv
-/build.sh
