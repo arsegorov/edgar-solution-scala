@@ -13,6 +13,7 @@ object Main extends IOSetup {
   
   val warn: String = "[" + Console.YELLOW + "warn" + Console.RESET + "]"
   val err: String = "[" + Console.RED + "error" + Console.RESET + "]"
+  val info: String = "[" + Console.GREEN + "info" + Console.RESET + "]"
   
   /**
     * The app's entry point
@@ -57,12 +58,14 @@ object Main extends IOSetup {
               match {
                 // If failed to open the output file, print a message, and exit
                 case Failure(_) =>
-                  println("Error: Unable to output the results to\n" +
+                  println("Unable to output the results to\n" +
                     s"\t$outputArg\n" +
                     "Exiting\n")
                 
                 // If succeeded, continue using the file handle
                 case Success(bw) =>
+                  println(s"$info Processing the data from ${Console.CYAN}$logArg${Console.RESET}\n" +
+                    s"\tWriting output to ${Console.CYAN}$outputArg${Console.RESET}\n")
                   SessionReporter.processData(data, timeout * 1000, bw)
                   bw.close()
               }
