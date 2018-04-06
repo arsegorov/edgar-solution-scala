@@ -70,6 +70,8 @@ $RECYCLE.BIN/
 project/build.properties
 /*.jar
 /build.sbt
-/test_log.csv
-/test_inactivity.txt
-/test_sessions.txt
+/test_log*
+/test_inactivity*
+/test_sessions*
+/insight_testsuite/temp/
+/insight_testsuite/results.txt

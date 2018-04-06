@@ -10,6 +10,7 @@ import org.scalatest.junit.JUnitRunner
 import org.scalatest.prop.Checkers
 
 import scala.io.Source
+import scala.math.random
 
 /**
   * A testing suite for the `edgar` application.
@@ -81,15 +82,15 @@ class EdgarSuite extends FunSuite with Checkers
     )
   }
   
-  test("Log generator works") {
+  test("Zero-timeout files") {
     var success = true
     try {
       val logGenerator = LogGenerator(
-        5,
-        1,
-        new File("test_log.csv"),
-        new File("test_inactivity.txt"),
-        10)
+        0,
+        50,
+        new File("test_log_0.csv"),
+        new File("test_inactivity_0.txt"),
+        random())
       
       logGenerator.writeInactivity()
       logGenerator.generateLog()
@@ -102,6 +103,27 @@ class EdgarSuite extends FunSuite with Checkers
     assert(success, "Couldn't generate the log file or the inactivity period file")
   }
   
+  test("Large files") {
+    var success = true
+    try {
+      val logGenerator = LogGenerator(
+        1200,
+        5000,
+        new File("test_log_large.csv"),
+        new File("test_inactivity_large.txt"),
+        0)
+
+      logGenerator.writeInactivity()
+      logGenerator.generateLog()
+    }
+    catch {
+      case _: Throwable =>
+        success = false
+    }
+
+    assert(success, "Couldn't generate the log file or the inactivity period file")
+  }
+
   test("The number of sessions is correct") {
     val gen = for {
       t <- Gen.choose(0, 300)
@@ -116,8 +138,8 @@ class EdgarSuite extends FunSuite with Checkers
             n,                  // The number of sessions
             new File("test_log.csv"),
             new File("test_inactivity.txt"),
-            math.random())
-          
+            random())
+
           logGenerator.writeInactivity()
           logGenerator.generateLog()
 
