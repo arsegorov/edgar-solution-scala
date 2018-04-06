@@ -9,7 +9,7 @@ declare -r info="[${grn}info${nrm}]\t"
 # Paths
 declare -r scala_in=src/main/scala
 declare -r scala_src=${scala_in}/edgar
-declare -r scala_out=out
+declare -r scala_out=scala_out
 declare -r jar=edgar.jar
 
 # Building
