@@ -1,5 +1,7 @@
 package edgar
 
+import java.io.File
+
 import org.junit.runner.RunWith
 import org.scalacheck.Gen
 import org.scalacheck.Prop._
@@ -7,7 +9,11 @@ import org.scalatest.FunSuite
 import org.scalatest.junit.JUnitRunner
 import org.scalatest.prop.Checkers
 
+import scala.io.Source
 
+/**
+  * A testing suite for the `edgar` application.
+  */
 @RunWith(classOf[JUnitRunner])
 class EdgarSuite extends FunSuite with Checkers
 {
@@ -21,14 +27,14 @@ class EdgarSuite extends FunSuite with Checkers
   test("The IPs in the pool are properly formatted") {
     check {
       val ip = ipPool.draw().split("\\.")
-      ip.length == 4 && ip.take(3).map(_.toInt).forall(n => n >=0 && n < 256)
+      ip.length == 4 && ip.take(3).map(_.toInt).forall(n => n >=0 && n < 256) && ip(3).length == 3
     }
   }
   
   test("Different items in the pool represent different IPs") {
     val gen = for {
-      n <- Gen.choose(0, poolSize)
-      m <- Gen.choose(0, poolSize)
+      n <- Gen.choose(0, poolSize - 1)
+      m <- Gen.choose(0, poolSize - 1)
     } yield (m, n)
     
     check {
@@ -48,7 +54,7 @@ class EdgarSuite extends FunSuite with Checkers
     check(
       forAll(gen) {
         case (t, m, n) =>
-          (Session("", t, m, n).end == t) == (n == 1)
+          (Session("", t, m, n).tLast == t) == (n == 1)
       }
     )
   }
@@ -62,15 +68,61 @@ class EdgarSuite extends FunSuite with Checkers
     check(
       forAll(gen) {
         case (t, n) =>
-          val sess = Session("", t, 3, n)
+          val session = Session("", t, 3, n)
           var count = 0
           
-          while (sess.hasNext) {
+          while (session.hasNext) {
             count += 1
-            sess.next
+            session.pop
           }
           
           count == n
+      }
+    )
+  }
+  
+  test("Log generator works") {
+    var success = true
+    try {
+      val logGenerator = LogGenerator(
+        5,
+        1,
+        new File("test_log.csv"),
+        new File("test_inactivity.txt"),
+        10)
+      
+      logGenerator.writeInactivity()
+      logGenerator.generateLog()
+    }
+    catch {
+      case _: Throwable =>
+        success = false
+    }
+    
+    assert(success, "Couldn't generate the log file or the inactivity period file")
+  }
+  
+  test("The number of sessions is correct") {
+    val gen = for {
+      t <- Gen.choose(0, 300)
+      n <- Gen.choose(0, 200)
+    } yield (t, n)
+
+    check(
+      forAll(gen) {
+        case (t, n) =>
+          val logGenerator = LogGenerator(
+            t,                  // Timeout
+            n,                  // The number of sessions
+            new File("test_log.csv"),
+            new File("test_inactivity.txt"),
+            math.random())
+          
+          logGenerator.writeInactivity()
+          logGenerator.generateLog()
+
+          Main.main(Array("test_log.csv", "test_inactivity.txt", "test_sessions.txt"))
+          Source.fromFile("test_sessions.txt").getLines.length == n
       }
     )
   }

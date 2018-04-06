@@ -8,6 +8,10 @@ import edgar.Main.warn
 import scala.collection.mutable
 import scala.util.{Failure, Success}
 
+/**
+  * Traverses an EDGAR log file and outputs to detect access sessions,
+  * and writes the detected sessions to a file.
+  */
 object SessionReporter extends RequestParser {
   
   /**
@@ -22,12 +26,12 @@ object SessionReporter extends RequestParser {
     * If the sessions started at the same time, then we use the order in which they appear in the log,
     * given by '''`idx`'''.
     */
-  private final object AppearanceOrder extends Ordering[(String, Int, Long, Long, Int)] {
+  private final object AppearanceOrdering extends Ordering[(String, Int, Long, Long, Int)] {
     /**
       * Compares two tuples first on their 3rd component, then on their 2nd component.
       *
-      * @param s1 The first tuple
-      * @param s2 The second tuple
+      * @param s1 the first tuple
+      * @param s2 the second tuple
       * @return `&nbsp;1`, if `s1 > s2`<br/>
       *         `&nbsp;0`, if `s1 == s2`<br/>
       *         `-1`,      if `s1 < s2`
@@ -43,12 +47,11 @@ object SessionReporter extends RequestParser {
     * Goes over the log file line by line to identify sessions,
     * and sends information about detected sessions to the output file.
     *
-    * @param lines   The iterator over the log data lines (should not include the header line)
-    * @param tOutMil The session timeout, in milliseconds
-    * @param bw      The path and name of the output file
+    * @param lines   the iterator over the log data lines (should not include the header line)
+    * @param tOutMil the session timeout, in milliseconds
+    * @param bw      the path and name of the output file
     */
-  def processData(lines: Iterator[String], tOutMil: Int, bw: BufferedWriter): Unit =
-  {
+  def processData(lines: Iterator[String], tOutMil: Int, bw: BufferedWriter): Unit = {
     // Session data
     // IP -> line index, first request time, last request time, request count
     val ipMap: mutable.HashMap[String, (Int, Long, Long, Int)] = mutable.HashMap()
@@ -59,7 +62,7 @@ object SessionReporter extends RequestParser {
     var oldestTLast: Long = -1L
     
     // The output queue for expired sessions, sorting the sessions according to the first appearance
-    val outputBatch: mutable.SortedSet[(String, Int, Long, Long, Int)] = mutable.SortedSet()(AppearanceOrder)
+    val outputBatch: mutable.SortedSet[(String, Int, Long, Long, Int)] = mutable.SortedSet()(AppearanceOrdering)
     
     // tracking the log line's number
     var idx = 2
@@ -68,19 +71,17 @@ object SessionReporter extends RequestParser {
     // (the lines are read from the file one at a time, only when we're asking for the next request)
     val requests = lines.map(toRequest)
     
-    while (requests.hasNext)
-    {
+    while (requests.hasNext) {
       // Trying to read the next log line to get the request information
-      requests.next match
-      {
+      requests.next match {
         // If the current log line is malformed,
         // print a message, and continue to the next log line
         case Failure(e) =>
           println(
             s"$warn Unexpected format on line $idx\n" +
-            s"${e.getMessage}\n" +
-            s"Skipping line $idx\n")
-  
+              s"${e.getMessage}\n" +
+              s"Skipping line $idx\n")
+        
         // If the current line is well-formed, continue
         case Success(Request(ip, timestamp)) =>
           
@@ -102,49 +103,49 @@ object SessionReporter extends RequestParser {
           
           // Now, see if any sessions have expired
           
-          if (oldestTLast < cutoffTime) {                          // Only detect expired sessions when there are some
+          if (oldestTLast < cutoffTime) { // Only detect expired sessions when there are some
             val expiredTimes = timeMap.keys.filter(_ < cutoffTime) // All the expired times
-  
+            
             expiredTimes.foreach {
               expiredTime =>
                 val Some(expiredIPs) = timeMap.remove(expiredTime) // Remove the expired times, one at a time
                 expiredIPs.foreach {
-                  expiredIP =>                                     // For each expired time,
-                                                                   // queue the corresponding sessions for output
+                  expiredIP => // For each expired time,
+                    // queue the corresponding sessions for output
                     val Some((firstIdx, tFirst, tLast, count)) = ipMap.remove(expiredIP)
                     outputBatch.add((expiredIP, firstIdx, tFirst, tLast, count))
                 }
             }
             
-            oldestTLast =                                          // Update the time of the earliest saved session
+            oldestTLast = // Update the time of the earliest saved session
               if (timeMap.nonEmpty) timeMap.keys.min
               else -1L
-  
-            outputBatch.foreach {                                  // Output the queued sessions
+            
+            outputBatch.foreach { // Output the queued sessions
               case (ip1, _, tFirst, tLast, count) => outputSession(ip1, tFirst, tLast, count, bw)
             }
-            outputBatch.clear                                      // Then clear the queue
+            outputBatch.clear // Then clear the queue
           }
           
           // If a session for this IP hasn't been renewed
           // there's no record of this IP at this point, so we add a new record
           if (!renewed) ipMap.put(ip, (idx, timestamp, timestamp, 1))
-  
+          
           // Save this request's IP to the set of requests for the current timestamp
-          if(timeMap.contains(timestamp)) timeMap(timestamp).add(ip) else timeMap.put(timestamp, mutable.Set(ip))
+          if (timeMap.contains(timestamp)) timeMap(timestamp).add(ip) else timeMap.put(timestamp, mutable.Set(ip))
       }
       
       idx += 1
     }
-  
+    
     // Reached the end of the log
-  
+    
     // Queueing any remaining sessions for output
     ipMap.foreach {
       case (ip, (oldIdx, tFirst, tLast, count)) =>
         outputBatch.add((ip, oldIdx, tFirst, tLast, count))
     }
-  
+    
     // Outputting each expired session, and clearing the queue
     outputBatch.foreach {
       case (ip, _, tFirst, tLast, count) => outputSession(ip, tFirst, tLast, count, bw)
@@ -154,14 +155,13 @@ object SessionReporter extends RequestParser {
   /**
     * Outputs session data to a [[java.io.BufferedWriter BufferedWriter]].
     *
-    * @param ip     The IP address from which the session has been initiated
-    * @param tFirst The time of the first request in the session
-    * @param tLast  The time of the last request in the session
-    * @param count  The number of requests in the session
-    * @param bw     The [[java.io.BufferedWriter BufferedWriter]] to output to
+    * @param ip     the IP address from which the session has been initiated
+    * @param tFirst the time of the first request in the session
+    * @param tLast  the time of the last request in the session
+    * @param count  the number of requests in the session
+    * @param bw     the [[java.io.BufferedWriter BufferedWriter]] to output to
     */
-  private def outputSession(ip: String, tFirst: Long, tLast: Long, count: Int, bw: BufferedWriter): Unit =
-  {
+  private def outputSession(ip: String, tFirst: Long, tLast: Long, count: Int, bw: BufferedWriter): Unit = {
     // Generating the Data/Time strings from the timestamps
     // These strings are used instead of the default Timestamp.toString
     // because the default includes the decimal point with nanoseconds

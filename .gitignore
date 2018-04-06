@@ -69,5 +69,7 @@ $RECYCLE.BIN/
 .idea/
 project/build.properties
 /*.jar
-/insight_testsuite/
 /build.sbt
+/test_log.csv
+/test_inactivity.txt
+/test_sessions.txt

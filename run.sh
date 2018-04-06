@@ -54,9 +54,9 @@ args[2]=./input/inactivity_period.txt
 args[3]=./output/sessionization.txt
 
 # substituting the passed arguments
-for i in 1..3; do
+for i in 1 2 3; do
     if [ ! -z ${!i} ]; then
-        args[i]=${!i}
+        args[${i}]=${!i}
     fi
 done
 

@@ -4,7 +4,11 @@ import java.io.File
 
 import scala.util.{Failure, Success}
 
-
+/**
+  * The main class of the application.<br/>
+  * Checks the arguments, input, and output, and then delegates the processing
+  * to [[edgar.SessionReporter SessionReporter]].
+  */
 object Main extends IOSetup {
   
   val warn: String = "[" + Console.YELLOW + "warn" + Console.RESET + "]"
@@ -13,7 +17,7 @@ object Main extends IOSetup {
   /**
     * The app's entry point
     *
-    * @param args The command line arguments
+    * @param args the command line arguments
     */
   def main(args: Array[String]): Unit = {
     if (args.length < 3) println("Please specify two input files and one output file")
